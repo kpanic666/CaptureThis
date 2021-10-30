@@ -10,7 +10,7 @@ import UIKit
 class ViewController: UITableViewController, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
     var items = [Item]()
     let itemsUDKey = "items"
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -18,12 +18,8 @@ class ViewController: UITableViewController, UIImagePickerControllerDelegate, UI
         let addItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(addImage))
         toolbarItems = [spaceItem, addItem, spaceItem]
         
-        let defaults = UserDefaults.standard
-        
-        if let savedItems = defaults.object(forKey: itemsUDKey) as? Data {
-            if let decodedItems = try? JSONDecoder().decode([Item].self, from: savedItems) {
-                items = decodedItems
-            }
+        if let dataItems = UserDefaults.standard.object(forKey: itemsUDKey) as? Data {
+            items = (try? PropertyListDecoder().decode([Item].self, from: dataItems)) ?? [Item]()
         }
     }
     
@@ -49,38 +45,33 @@ class ViewController: UITableViewController, UIImagePickerControllerDelegate, UI
         
         let item = Item(image: imageName, description: nil)
         items.append(item)
-        let index = IndexPath(row: items.endIndex - 1, section: 0)
-        tableView.insertRows(at: [index], with: .automatic)
         
-        dismiss(animated: true)
+        dismiss(animated: true, completion: showDescDialog)
     }
     
-//    func showDescDialog() {
-//        let ac = UIAlertController(title: "Type description text:", message: nil, preferredStyle: .alert)
-//        ac.addTextField()
-//        ac.addAction(UIAlertAction(title: "OK", style: .default) { [unowned ac, weak self] _ in
-//            let description = ac.textFields?[0].text ?? ""
-//            if var lastItem = self?.items.last {
-//                lastItem.description = description
-//                let lastIndex =
-//                self?.items[(self?.items.endIndex)! - 1] = lastItem
-//
-//                let index = IndexPath(row: items.endIndex - 1, section: 0)
-//                tableView.reloadRows(at: [index], with: .automatic)
-//            }
-//        }
-//
-//
-//
-//        //        save()
-//    }
+    func showDescDialog() {
+        let ac = UIAlertController(title: "Type description text:", message: nil, preferredStyle: .alert)
+        ac.addTextField()
+        ac.addAction(UIAlertAction(title: "OK", style: .default) { [unowned ac, weak self] _ in
+            let description = ac.textFields?[0].text ?? ""
+            
+            let lastIndex = (self?.items.endIndex)! - 1
+            self?.items[lastIndex].description = description
+            
+            let index = IndexPath(row: lastIndex, section: 0)
+            self?.tableView.insertRows(at: [index], with: .automatic)
+            
+            self?.save()
+        })
+        
+        present(ac, animated: true)
+    }
     
-//    func save() {
-//        if let savedData = try? NSKeyedArchiver.archivedData(withRootObject: people, requiringSecureCoding: false) {
-//            let defaults = UserDefaults.standard
-//            defaults.set(savedData, forKey: "people")
-//        }
-//    }
+    func save() {
+        if let encodedItems = try? PropertyListEncoder().encode(items) {
+            UserDefaults.standard.set(encodedItems, forKey: itemsUDKey)
+        }
+    }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         items.count
@@ -121,4 +112,3 @@ class ViewController: UITableViewController, UIImagePickerControllerDelegate, UI
         return paths[0]
     }
 }
-
